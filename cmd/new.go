@@ -16,9 +16,10 @@ const (
 	repoURL = "https://github.com/q1mi/gin-base-layout.git"
 )
 
+// Project 结构体，用于存储项目信息
 type Project struct {
 	ProjectName string `survey:"name"`
-	FolderName  string
+	FolderName  string // 文件夹名称，例如：github.com/xxx/xx -> xx
 }
 
 var NewCmd = &cobra.Command{
@@ -32,7 +33,7 @@ var NewCmd = &cobra.Command{
 func NewProject(projectName string) *Project {
 	return &Project{
 		ProjectName: projectName,
-		FolderName:  filepath.Base(filepath.Clean(projectName)), //  eq: github.com/xxx/xx -> xx
+		FolderName:  filepath.Base(filepath.Clean(projectName)), // get xx from github.com/xxx/xx
 	}
 }
 
