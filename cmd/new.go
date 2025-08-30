@@ -13,27 +13,40 @@ import (
 )
 
 const (
-	repoURL = "https://github.com/q1mi/gin-base-layout.git"
+	baseRepoURL     = "https://github.com/q1mi/gin-base-layout.git"
+	advancedRepoURL = "https://github.com/q1mi/gin-advanced-layout.git"
 )
 
 // Project 结构体，用于存储项目信息
 type Project struct {
 	ProjectName string `survey:"name"`
 	FolderName  string // 文件夹名称，例如：github.com/xxx/xx -> xx
+	RepoURL     string // 模板仓库URL
 }
+
+var (
+	advanced bool
+	repoURL  string
+)
 
 var NewCmd = &cobra.Command{
 	Use:     "new",
-	Example: "iaa new project-name",
+	Example: "iaa new project-name [--advanced] [--repo <url>]",
 	Short:   "create a new project.",
-	Long:    `create a new project with gin-base-layout.`,
+	Long:    `create a new project with gin-base-layout or gin-advanced-layout.`,
 	Run:     run,
 }
 
-func NewProject(projectName string) *Project {
+func init() {
+	NewCmd.Flags().BoolVar(&advanced, "advanced", false, "use advanced template (gin-advanced-layout)")
+	NewCmd.Flags().StringVar(&repoURL, "repo", "", "specify custom template repository URL")
+}
+
+func NewProject(projectName, templateRepo string) *Project {
 	return &Project{
 		ProjectName: projectName,
 		FolderName:  filepath.Base(filepath.Clean(projectName)), // get xx from github.com/xxx/xx
+		RepoURL:     templateRepo,
 	}
 }
 
@@ -42,7 +55,22 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Println("need project name")
 		return
 	}
-	p := NewProject(args[0])
+
+	// 确定使用的模板仓库
+	var templateRepo string
+	switch {
+	case repoURL != "":
+		// 自定义仓库优先级最高
+		templateRepo = repoURL
+	case advanced:
+		// 使用进阶模板
+		templateRepo = advancedRepoURL
+	default:
+		// 默认使用基础模板
+		templateRepo = baseRepoURL
+	}
+
+	p := NewProject(args[0], templateRepo)
 	fmt.Printf("🚀 Start to create project \u001B[36m%s\u001B[0m...\n", p.ProjectName)
 	// clone repo
 	yes, err := p.cloneRepo()
@@ -92,11 +120,11 @@ func (p *Project) cloneRepo() (bool, error) {
 		}
 	}
 
-	fmt.Println("git clone ", repoURL)
-	cmd := exec.Command("git", "clone", repoURL, p.FolderName)
+	fmt.Println("git clone ", p.RepoURL)
+	cmd := exec.Command("git", "clone", p.RepoURL, p.FolderName)
 	_, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Printf("git clone %s error: %s\n", repoURL, err)
+		fmt.Printf("git clone %s error: %s\n", p.RepoURL, err)
 		return false, err
 	}
 	return true, nil
